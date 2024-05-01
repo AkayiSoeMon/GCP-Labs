@@ -1,0 +1,133 @@
+Ensure-Access-Identity-in-Google-Cloud-Challenge-Lab:
+Before stepping inside the main tasks, I suggest you conduct the following preparations.
+
+🔍 Inspect provisioned resources
+In the Cloud Console, navigate to Compute Engine > VM instances.
+Click the name of the instance called orca-jumphost to view the detail page.
+Scroll to the Network interfaces section, click on the network called orca-build-vpc.
+Find out the region of the orca-build-vpc subnet.
+
+📍 Set a zone
+The lab provision created the subnet to the region, for example "us-east1".
+Later on, we will need to deploy a Kubernetes cluster to the subnet. To ensure they are in the same region, run the following to configure the default zone in the cloud shell:
+gcloud config set compute/zone us-east1-b
+
+##############################################################################################
+
+Task 1: Create a custom security role.
+
+Execute this command on cloud shell to create yaml file for custom role:
+
+nano role-definition.yaml
+
+Replace the below content in the file:
+
+title: "orca_storage_update"
+description: "Permissions"
+stage: "ALPHA"
+includedPermissions:
+- storage.buckets.get
+- storage.objects.get
+- storage.objects.list
+- storage.objects.update
+- storage.objects.create
+
+
+
+
+
+Ctrl+x
+Y
+Enter
+
+
+
+
+gcloud iam roles create orca_storage_update --project $DEVSHELL_PROJECT_ID \
+--file role-definition.yaml
+
+
+###############################################################################################
+
+Task 2: Create a service account.
+
+
+commands for task2 (Create a service account) & task3 (Bind a custom secuerity role to a service account):
+
+gcloud iam service-accounts create orca-private-cluster-sa --display-name "my service account"
+
+gcloud alpha projects add-iam-policy-binding $DEVSHELL_PROJECT_ID \
+--member serviceAccount:orca-private-cluster-sa@$DEVSHELL_PROJECT_ID.iam.gserviceaccount.com \
+--role "projects/$DEVSHELL_PROJECT_ID/roles/orca_storage_update" 
+
+gcloud projects add-iam-policy-binding $DEVSHELL_PROJECT_ID \
+--member serviceAccount:orca-private-cluster-sa@$DEVSHELL_PROJECT_ID.iam.gserviceaccount.com \
+--role “roles/monitoring.viewer”
+
+gcloud projects add-iam-policy-binding $DEVSHELL_PROJECT_ID \
+--member serviceAccount:orca-private-cluster-sa@$DEVSHELL_PROJECT_ID.iam.gserviceaccount.com 
+--role “roles/logging.logWriter” 
+
+gcloud projects add-iam-policy-binding $DEVSHELL_PROJECT_ID \
+--member serviceAccount:orca-private-cluster-sa@$DEVSHELL_PROJECT_ID.iam.gserviceaccount.com \
+--role “roles/monitoring.metricWriter”
+
+
+
+********
+Another Method in video if you get error:
+
+##################################################################################################
+Task 4: Create and configure a new Kubernetes Engine private cluster
+
+
+Step 1: Navigate to "Compute Engine" in the Cloud Console, note down the "Internal IP" address of the "orca-jumphost" instance.
+Alternatively, you can use the following command to obtain the IP address: 
+
+JUMPHOST_IP=$(gcloud compute instances describe orca-jumphost \
+--format='get(networkInterfaces[0].networkIP)')
+
+Step 2: Navigate to VPC network in the Cloud Console, note down the IP address range for the regional subnet. 
+You may also lookup the IP range from https://cloud.google.com/vpc/docs/vpc. The IP address for us-east1 is 10.142.0.0.
+SUBNET_IP_RANGE="10.142.0.0/28"
+
+Step 3: Run the following gcloud command to create the cluster with the required configurations:
+gcloud container clusters create orca-test-cluster \
+	--num-nodes 1 \
+	--master-ipv4-cidr=172.16.0.64/28 \
+	--network orca-build-vpc \
+	--subnetwork orca-build-subnet \ 
+	--enable-master-authorized-networks \  
+	--master-authorized-networks 192.168.10.2/32 \ 
+	--enable-ip-alias \
+	--enable-private-nodes \ 
+	--enable-private-endpoint \ 
+	--service-account orca-private-cluster-sa@<Project ID>.iam.gserviceaccount.com 
+	--zone [Add your assigned zone here]
+
+
+//Alternative Code
+gcloud beta container clusters create orca-test-cluster \
+   --network orca-build-vpc \
+   --subnetwork orca-build-subnet \
+   --service-account=SERVICE_ACCOUNT orca-private-cluster-sa@$DEVSHELL_PROJECT_ID.iam.gserviceaccount.com \
+   --enable-master-authorized-networks $JUMPHOST_IP/32 \
+   --master-authorized-networks \
+   --enable-private-nodes \
+   --master-ipv4-cidr $SUBNET_IP_RANGE
+   --enable-ip-alias \
+   --enable-private-endpoint
+
+######################################################################################################
+Task 5: Deploy an application to a private Kubernetes Engine cluster.
+Step 1: Navigate to "Compute Engine" in the Cloud Console.
+Step 2: Click on the SSH button for the "orca-jumphost" instance.
+Step 3: In the SSH window, connect to the private cluster by running the following code:
+gcloud container clusters get-credentials orca-test-cluster --internal-ip --zone <Assigned Zone in task> --project <Project ID>
+
+Step 4: Deploy "hello-server" to the private cluster using the following kubecl command. 
+kubectl create deployment hello-server --image=gcr.io/google-samples/hello-app:1.0
+
+step 5: Finally, run the following to expose the application using a load balancer service with mapping from port 80 to 8080:
+kubectl expose deployment hello-server --name orca-hello-service \
+   --type LoadBalancer --port 80 --target-port 8080
