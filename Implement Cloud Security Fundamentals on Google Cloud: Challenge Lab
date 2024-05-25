@@ -10,7 +10,7 @@ Find out the region of the orca-build-vpc subnet.
 📍 Set a zone
 The lab provision created the subnet to the region, for example "us-east1".
 Later on, we will need to deploy a Kubernetes cluster to the subnet. To ensure they are in the same region, run the following to configure the default zone in the cloud shell:
-gcloud config set compute/zone us-east1-b
+gcloud config set compute/zone [Replace the whole bracket with your assigned zone]
 
 ##############################################################################################
 
@@ -58,19 +58,19 @@ gcloud iam service-accounts create orca-private-cluster-sa --display-name "my se
 
 gcloud alpha projects add-iam-policy-binding $DEVSHELL_PROJECT_ID \
 --member serviceAccount:orca-private-cluster-sa@$DEVSHELL_PROJECT_ID.iam.gserviceaccount.com \
---role "projects/$DEVSHELL_PROJECT_ID/roles/orca_storage_update" 
+--role projects/$DEVSHELL_PROJECT_ID/roles/[orca_storage_update] 
 
 gcloud projects add-iam-policy-binding $DEVSHELL_PROJECT_ID \
 --member serviceAccount:orca-private-cluster-sa@$DEVSHELL_PROJECT_ID.iam.gserviceaccount.com \
---role “roles/monitoring.viewer”
-
-gcloud projects add-iam-policy-binding $DEVSHELL_PROJECT_ID \
---member serviceAccount:orca-private-cluster-sa@$DEVSHELL_PROJECT_ID.iam.gserviceaccount.com 
---role “roles/logging.logWriter” 
+--role roles/monitoring.viewer
 
 gcloud projects add-iam-policy-binding $DEVSHELL_PROJECT_ID \
 --member serviceAccount:orca-private-cluster-sa@$DEVSHELL_PROJECT_ID.iam.gserviceaccount.com \
---role “roles/monitoring.metricWriter”
+--role roles/logging.logWriter
+
+gcloud projects add-iam-policy-binding $DEVSHELL_PROJECT_ID \
+--member serviceAccount:orca-private-cluster-sa@$DEVSHELL_PROJECT_ID.iam.gserviceaccount.com \
+--role roles/monitoring.metricWriter
 
 
 
@@ -92,7 +92,7 @@ You may also lookup the IP range from https://cloud.google.com/vpc/docs/vpc. The
 SUBNET_IP_RANGE="10.142.0.0/28"
 
 Step 3: Run the following gcloud command to create the cluster with the required configurations:
-gcloud container clusters create orca-test-cluster \
+gcloud container clusters create [orca-test-cluster] \
 	--num-nodes 1 \
 	--master-ipv4-cidr=172.16.0.64/28 \
 	--network orca-build-vpc \
@@ -102,28 +102,39 @@ gcloud container clusters create orca-test-cluster \
 	--enable-ip-alias \
 	--enable-private-nodes \ 
 	--enable-private-endpoint \ 
-	--service-account orca-private-cluster-sa@<Project ID>.iam.gserviceaccount.com 
+	--service-account [orca-private-cluster-sa]@$DEVSHELL_PROJECT_ID.iam.gserviceaccount.com \
 	--zone [Add your assigned zone here]
 
 
 //Alternative Code
-gcloud beta container clusters create orca-test-cluster \
-   --network orca-build-vpc \
-   --subnetwork orca-build-subnet \
-   --service-account=SERVICE_ACCOUNT orca-private-cluster-sa@$DEVSHELL_PROJECT_ID.iam.gserviceaccount.com \
-   --enable-master-authorized-networks $JUMPHOST_IP/32 \
-   --master-authorized-networks \
-   --enable-private-nodes \
-   --master-ipv4-cidr $SUBNET_IP_RANGE
-   --enable-ip-alias \
-   --enable-private-endpoint
+gcloud container clusters create [orca-cluster-844] \                                                                                                                                                                --enable-private-nodes \ 
+--enable-private-nodes \ 
+--master-ipv4-cidr 172.16.0.16/28 \
+--enable-ip-alias \
+--create-subnetwork name=orca-build-subnet \
+--service-account [orca-private-cluster-906-s]a@$DEVSHELL_PROJECT_ID.iam.gserviceaccount.com \
+--enable-master-authorized-networks \
+--network orca-build-vpc \
+
+Step 4: List the subnets in the default network:
+gcloud compute networks subnets list --network default
+
+
+Step 5: In the output, find the name of the subnetwork that was automatically created for your cluster. For example, gke-private-cluster-subnet-xxxxxxxx. Save the name of the cluster, you'll use it in the next step.
+In the output, find the name of the subnetwork that was automatically created for your cluster. For example, gke-private-cluster-subnet-xxxxxxxx. Save the name of the cluster, you'll use it in the next step.
+
+gcloud compute networks subnets describe [SUBNET_NAME] --region=$REGION
+
+--master-authorized-networks 192.168.10.2/32 \
+--zone [us-east1-d] \
+
 
 ######################################################################################################
 Task 5: Deploy an application to a private Kubernetes Engine cluster.
 Step 1: Navigate to "Compute Engine" in the Cloud Console.
 Step 2: Click on the SSH button for the "orca-jumphost" instance.
 Step 3: In the SSH window, connect to the private cluster by running the following code:
-gcloud container clusters get-credentials orca-test-cluster --internal-ip --zone <Assigned Zone in task> --project <Project ID>
+gcloud container clusters get-credentials orca-test-cluster --internal-ip --zone <Assigned Zone in task> --project $DEVSHELL_PROJECT_ID
 
 Step 4: Deploy "hello-server" to the private cluster using the following kubecl command. 
 kubectl create deployment hello-server --image=gcr.io/google-samples/hello-app:1.0
