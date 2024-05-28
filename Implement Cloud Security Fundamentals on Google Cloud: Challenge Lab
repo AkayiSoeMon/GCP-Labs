@@ -22,7 +22,7 @@ nano role-definition.yaml
 
 Replace the below content in the file:
 
-title: "orca_storage_update"
+title: "[orca_storage_update]"
 description: "Permissions"
 stage: "ALPHA"
 includedPermissions:
@@ -54,10 +54,10 @@ Task 2: Create a service account.
 
 commands for task2 (Create a service account) & task3 (Bind a custom secuerity role to a service account):
 
-gcloud iam service-accounts create orca-private-cluster-sa --display-name "my service account"
+gcloud iam service-accounts create [orca-private-cluster-sa] --display-name "my service account"
 
 gcloud alpha projects add-iam-policy-binding $DEVSHELL_PROJECT_ID \
---member serviceAccount:orca-private-cluster-sa@$DEVSHELL_PROJECT_ID.iam.gserviceaccount.com \
+--member serviceAccount:[orca-private-cluster-sa]@$DEVSHELL_PROJECT_ID.iam.gserviceaccount.com \
 --role projects/$DEVSHELL_PROJECT_ID/roles/[orca_storage_update] 
 
 gcloud projects add-iam-policy-binding $DEVSHELL_PROJECT_ID \
@@ -74,9 +74,6 @@ gcloud projects add-iam-policy-binding $DEVSHELL_PROJECT_ID \
 
 
 
-********
-Another Method in video if you get error:
-
 ##################################################################################################
 Task 4: Create and configure a new Kubernetes Engine private cluster
 
@@ -92,38 +89,25 @@ You may also lookup the IP range from https://cloud.google.com/vpc/docs/vpc. The
 SUBNET_IP_RANGE="10.142.0.0/28"
 
 Step 3: Run the following gcloud command to create the cluster with the required configurations:
-gcloud beta container clusters create [orca-test-cluster] \
-	--network orca-build-vpc \
-	--subnetwork orca-build-subnet \ 
-	--service-account [orca-private-cluster-sa]@$DEVSHELL_PROJECT_ID.iam.gserviceaccount.com \
-	--master-ipv4-cidr 172.16.0.16/28 \
-	--enable-master-authorized-networks \  
-	--enable-ip-alias \
-	--enable-private-endpoint \ 
-	--zone=$ZONE
-
-
-//Alternative Code
-gcloud container clusters create [orca-cluster-844] \                                                                                                                                                                --enable-private-nodes \ 
---enable-private-nodes \ 
---master-ipv4-cidr 172.16.0.16/28 \
---enable-ip-alias \
---create-subnetwork name=orca-build-subnet \
---service-account [orca-private-cluster-906-s]a@$DEVSHELL_PROJECT_ID.iam.gserviceaccount.com \
---enable-master-authorized-networks \
---network orca-build-vpc \
+gcloud beta container clusters create orca-cluster-564 \
+    --network [orca-build-vpc] \
+    --subnetwork orca-build-subnet \
+    --service-account [orca-private-cluster-522-sa]@$DEVSHELL_PROJECT_ID.iam.gserviceaccount.com \
+    --master-ipv4-cidr 172.16.0.16/28 \
+    --enable-master-authorized-networks \
+    --enable-ip-alias \
+    --enable-private-nodes \
+    --enable-private-endpoint 
 
 Step 4: List the subnets in the default network:
-gcloud compute networks subnets list --network default
+gcloud compute networks subnets list --network [orca-build-vpc]
 
 
 Step 5: In the output, find the name of the subnetwork that was automatically created for your cluster. For example, gke-private-cluster-subnet-xxxxxxxx. Save the name of the cluster, you'll use it in the next step.
-In the output, find the name of the subnetwork that was automatically created for your cluster. For example, gke-private-cluster-subnet-xxxxxxxx. Save the name of the cluster, you'll use it in the next step.
 
-gcloud compute networks subnets describe [SUBNET_NAME] --region=$REGION
-
---master-authorized-networks 192.168.10.2/32 \
---zone [us-east1-d] \
+gcloud container clusters update [orca-cluster-564] \
+    --enable-master-authorized-networks \
+    --master-authorized-networks [192.168.10.2]/32 
 
 
 ######################################################################################################
@@ -131,7 +115,7 @@ Task 5: Deploy an application to a private Kubernetes Engine cluster.
 Step 1: Navigate to "Compute Engine" in the Cloud Console.
 Step 2: Click on the SSH button for the "orca-jumphost" instance.
 Step 3: In the SSH window, connect to the private cluster by running the following code:
-gcloud container clusters get-credentials orca-test-cluster --internal-ip --zone <Assigned Zone in task> --project $DEVSHELL_PROJECT_ID
+gcloud container clusters get-credentials [orca-test-cluster] --internal-ip --zone <Assigned Zone in task> --project $DEVSHELL_PROJECT_ID
 
 Step 4: Deploy "hello-server" to the private cluster using the following kubecl command. 
 kubectl create deployment hello-server --image=gcr.io/google-samples/hello-app:1.0
