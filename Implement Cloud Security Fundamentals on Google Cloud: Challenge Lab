@@ -123,3 +123,20 @@ kubectl create deployment hello-server --image=gcr.io/google-samples/hello-app:1
 step 5: Finally, run the following to expose the application using a load balancer service with mapping from port 80 to 8080:
 kubectl expose deployment hello-server --name orca-hello-service \
    --type LoadBalancer --port 80 --target-port 8080
+
+
+
+==========================
+Alternative code
+
+gcloud compute ssh --zone "$ZONE" "orca-jumphost" --project "$DEVSHELL_PROJECT_ID"
+
+gcloud config set compute/zone $ZONE 
+
+gcloud container clusters get-credentials $CLUSTER_NAME --internal-ip 
+
+sudo apt-get install google-cloud-sdk-gke-gcloud-auth-plugin 
+
+kubectl create deployment hello-server --image=gcr.io/google-samples/hello-app:1.0 
+
+kubectl expose deployment hello-server --name orca-hello-service --type LoadBalancer --port 80 --target-port 8080
