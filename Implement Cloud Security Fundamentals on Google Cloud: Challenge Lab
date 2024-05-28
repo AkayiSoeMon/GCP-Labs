@@ -92,18 +92,15 @@ You may also lookup the IP range from https://cloud.google.com/vpc/docs/vpc. The
 SUBNET_IP_RANGE="10.142.0.0/28"
 
 Step 3: Run the following gcloud command to create the cluster with the required configurations:
-gcloud container clusters create [orca-test-cluster] \
-	--num-nodes 1 \
-	--master-ipv4-cidr=172.16.0.64/28 \
+gcloud beta container clusters create [orca-test-cluster] \
 	--network orca-build-vpc \
 	--subnetwork orca-build-subnet \ 
-	--enable-master-authorized-networks \  
-	--master-authorized-networks 192.168.10.2/32 \ 
-	--enable-ip-alias \
-	--enable-private-nodes \ 
-	--enable-private-endpoint \ 
 	--service-account [orca-private-cluster-sa]@$DEVSHELL_PROJECT_ID.iam.gserviceaccount.com \
-	--zone [Add your assigned zone here]
+	--master-ipv4-cidr 172.16.0.16/28 \
+	--enable-master-authorized-networks \  
+	--enable-ip-alias \
+	--enable-private-endpoint \ 
+	--zone=$ZONE
 
 
 //Alternative Code
